@@ -70,10 +70,21 @@ sub login {
     return $res->is_success;
 }
 
+sub settings {
+    my $self = shift;
+    if ( $self->{login_data} && $self->{login_data}->{settings} ) {
+        return $self->{login_data}->{settings};
+    }
+    else {
+        return +{};
+    }
+}
+
 sub login_with_token {
     my $self = shift;
     ...
 }
+
 
 sub previous_http_response {
     my $self = shift;
@@ -91,7 +102,7 @@ sub logout {
 ### me
 sub me {
     my $self = shift;
-    ...
+    
 }
 
 ### tasks
