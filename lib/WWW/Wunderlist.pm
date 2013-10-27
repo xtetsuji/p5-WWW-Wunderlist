@@ -244,7 +244,7 @@ WWW::Wunderlist - Wunderlist API wrapper
     $wl->post_task( title => 'Test of add task at' . localtime . ' #hashtag')
         or die "set_tasks failed.";
 
-    my @lists $wl->get_lists()
+    my @lists = $wl->get_lists()
         or die "get_lists failed.";
     $wl->post_list( title => 'New List' )
         or die "post_list failed.";
