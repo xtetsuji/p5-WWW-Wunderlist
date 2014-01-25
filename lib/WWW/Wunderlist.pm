@@ -6,7 +6,7 @@ use warnings;
 
 use Class::Accessor::Lite (
     new => 0,
-    rw  => [qw(email password endpoint_url)],
+    rw  => [qw(email password warnings endpoint_url)],
 );
 
 use Carp qw(carp croak);
@@ -28,7 +28,12 @@ sub new {
     my $self  = {};
     $self->{email}    = delete $arg{email};
     $self->{password} = delete $arg{password};
+    $self->{warnings} = delete $arg{warnings};
     $self->{endpoint_url} = ENDPOINT_URL; # for deligation.
+    if ( $self->{warnings} && $self->{warnings} ne 'FATAL' ) {
+        # In this version, warnings key is allowed "FATAL" only.
+        delete $self->{warnings};
+    }
     return bless $self, $class;
 }
 
@@ -46,6 +51,20 @@ sub json {
     my $self = shift;
     return $self->{json} if $self->{json};
     return $self->{json} = JSON->new->allow_nonref;
+}
+
+# error report. it call carp or croak
+# TODO: logging?
+sub error {
+    my $self = shift;
+    my $message = shift;
+    my $is_fatal = $self->{warnings} && $self->{warnings} eq 'FATAL';
+    if ( $is_fatal ) {
+        croak $message;
+    }
+    else {
+        carp $message;
+    }
 }
 
 # $wl->login()
@@ -118,7 +137,7 @@ sub get_tasks {
         if ( DEBUG ) {
             warn $res->as_string;
         }
-        carp "get_task is failed.";
+        $self->error("get_task is failed.");
         return;
     }
 }
@@ -158,7 +177,7 @@ sub post_task {
         if ( DEBUG ) {
             warn $res->as_string;
         }
-        carp "post_task is failed.";
+        $self->error("post_task is failed.");
         return;
     }
 }
@@ -187,7 +206,7 @@ sub get_lists {
         if ( DEBUG ) {
             warn $res->as_string;
         }
-        carp "get_lists is failed.";
+        $self->error("get_lists is failed.");
         return;
     }
 }
@@ -214,7 +233,7 @@ sub post_list {
         if ( DEBUG ) {
             warn $res->as_string;
         }
-        carp "post_lists is failed.";
+        $self->error("post_lists is failed.");
         return;
     }
 }
@@ -235,6 +254,7 @@ WWW::Wunderlist - Wunderlist API wrapper
     my $wl = WWW::Wunderlist->new(
         email    => YOUR_EMAIL,
         password => YOUR_PASSWORD,
+        # warnings => "FATAL", # If you want to exception when method is failed.
     );
     $wl->login()
         or die "login failed.";
@@ -269,8 +289,21 @@ You use this module, give those information to new constructor.
      password => 'xxx'
  );
 
+ my $wl = WWW::Wunderlist->new(
+     email => 'your@example.jp',
+     password => 'xxx',
+     warnings => "FATAL",
+ );
+
 It creates Wunderlist API object.
 Give your registered "email" and "password" to argument as key-value pair.
+
+If warnings key is specifiend and this value is "FATAL",
+then this object methods throw exception with method failing.
+This mode is called "FATAL mode" on this document.
+
+By default, when object method is failed,
+this method reports warning (Carp::carp).
 
 =head2 $wl->login()
 
@@ -278,6 +311,21 @@ Tring login. It object accesses Wunderlist API server for login.
 
 If login is success, it returns true.
 But login is failed, it returns false.
+
+When "FATAL mode", login is failed, it thorws exception;
+
+ my $wl = WWW::Wunderlist->new(
+     email => 'your@example.jp',
+     password => 'xxx',
+     warnings => 'FATAL'
+ );
+ local $@;
+ eval { $wl->login() };
+ if ( $@ ) {
+     ...
+     # your_log_method( "exception occured: " . $@ );
+     exit 1;
+ }
 
 =head2 my $settings = $wl->settings()
 
@@ -291,17 +339,20 @@ See L<Wunderlist API|https://wunderpy.readthedocs.org/en/latest/wunderlist_api/i
 =head2 my $res = $wl->latest_http_response()
 
 It returns latest HTTP response as HTTP::Response object.
-You can use it for debug and some scene.
+You can use it for DEBUG and some scene.
 
 =head2 $wl->logout()
 
 Do logout.
 
+Expire some tokens of having the instance object.
+
 =head2 my @tasks = $wl->get_tasks()
 
 It returns all tasks.
-Return value is list of WWW::Wunderlist::Task objects on list context,
-or ARRAY reference which has WWW::Wunderlist::Task objects on scalar context.
+
+Return value is list of L<WWW::Wunderlist::Task> objects on list context,
+or ARRAY reference which has L<WWW::Wunderlist::Task> objects on scalar context.
 
 See L<WWW::Wunderlist::Task> for detail.
 
@@ -341,7 +392,7 @@ For calling it, $wl $wl->login()ed already.
      title => TITLE_UTF8_STRING,
  );
 
-It posts list data by WWW::Wunderlist API.
+This method posts list data by WWW::Wunderlist API.
 
 If it's post is success, then it returns WWW::Wunderlist::List object.
 But it's post is failed, then it returns undef.
@@ -352,9 +403,11 @@ For calling it, $wl $wl->login()ed already.
 
 =head1 CAUTION
 
-THIS VERSION IS ALPHA RELEASE.
-THIS MODULE IS NOT SUPPORT ALL WUNDERLIST APIs.
-UNDER DEVELOPMENT YET.
+B<THIS VERSION IS ALPHA RELEASE.>
+
+B<THIS MODULE IS NOT SUPPORT ALL WUNDERLIST APIs.>
+
+B<UNDER DEVELOPMENT YET.>
 
 =head1 SEE ALSO
 
