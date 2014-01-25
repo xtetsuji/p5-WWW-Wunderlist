@@ -22,7 +22,7 @@ use Class::Accessor::Lite (
     wo => [],
 );
 
-# my $task = WWW::Wunderlist::Task->new( HASHREF )
+# my $task = WWW::Wunderlist::Task->new( HASHREF, API )
 # Internal method for creation object data.
 sub new {
     my $class = shift;
@@ -30,6 +30,9 @@ sub new {
     my $wl    = shift;
     if ( ref $arg ne 'HASH' ) {
         croak "1st argument required as HASH REFERENCE.";
+    }
+    if ( !ref $wl || !$wl->isa("WWW::Wunderlist") ) {
+        croak "2nd argument requires API object.";
     }
     $arg->{_api} = $wl;
     return bless $arg, $class;
@@ -57,7 +60,7 @@ sub put {
             $self->$key($data->{$key});
         }
         else {
-            carp qq{method "$key" is not defined.};
+            $self->_api->error(qq{method "$key" is not defined.});
         }
     }
     return $res->is_success;
@@ -90,14 +93,47 @@ WWW::Wunderlist::Task - Task object for Wunderlist API.
  my @tasks = $wl->get_tasks();
  my $task = @tasks[0]; # WWW::Wunderlist::Task object
 
-
 =head1 DESCRIPTION
 
-(stub)
+See L<WWW::Wunderlist> document for detail.
 
 =head1 METHODS
 
-(stub)
+=head2 WWW::Wunderlist::Task->new( ... )
+
+Internal use.
+
+=head2 $task->put( ... )
+
+Update this task information.
+
+This method is given key/value pair.
+writable properties is following.
+
+=head2 $task->delete()
+
+Delete this task.
+
+=head1 PROPERTIES
+
+writable properties:
+
+        note due_date recurrence_count.
+
+readonly properties:
+
+        assignee_id completed_at completed_by_id created_at
+        created_by_id deleted_at id list_id local_identifier
+        owner_id parent_id position recurrence_type recurring_parent_id
+        starred title type updated_at updated_by_id user_id version)],
+
+This properties are accessible by accessor method. e.g.
+
+ # read only properties:
+ my $assignee_id = $task->assignee_id;
+ 
+ # writable properties:
+ $task->note("this task is important");
 
 =head1 CAUTION
 

@@ -19,7 +19,7 @@ use Class::Accessor::Lite (
     wo => [],
 );
 
-# my $list = WWW::Wunderlist::List->new( HASHREF )
+# my $list = WWW::Wunderlist::List->new( HASHREF, API )
 # Internal method for creation object data.
 sub new {
     my $class = shift;
@@ -27,6 +27,9 @@ sub new {
     my $wl    = shift;
     if ( ref $arg ne 'HASH' ) {
         croak "1st argument required as HASH REFERENCE.";
+    }
+    if ( !ref $wl || !$wl->isa("WWW::Wunderlist") ) {
+        croak "2nd argument requires API object.";
     }
     $arg->{_api} = $wl;
     return bless $arg, $class;
@@ -63,17 +66,35 @@ WWW::Wunderlist::List - List object for Wunderlist API.
 
 =head1 DESCRIPTION
 
-(stub)
+See L<WWW::Wunderlist> document for detail.
 
 =head1 METHODS
 
-(stub)
+=head2 WWW::Wunderlist::List->new( ... )
+
+Internal use.
+
+=head2 $list->delete()
+
+Delete this list.
+
+=head1 PROPERTIES
+
+readonly properties:
+
+        created_at id local_identifier owner_id position title type
+        update_at version
+
+This properties are accessible by accessor method. e.g.
+
+ # read only properties:
+ my $created_at = $task->created_at;
 
 =head1 CAUTION
 
-THIS VERSION IS ALPHA RELEASE.
-THIS MODULE IS NOT SUPPORT ALL WUNDERLIST APIs.
-UNDER DEVELOPMENT YET.
+B<THIS VERSION IS ALPHA RELEASE.>
+B<THIS MODULE IS NOT SUPPORT ALL WUNDERLIST APIs.>
+B<UNDER DEVELOPMENT YET.>
 
 =head1 SEE ALSO
 
