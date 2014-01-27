@@ -6,7 +6,7 @@ use warnings;
 
 use Class::Accessor::Lite (
     new => 0,
-    rw  => [qw(email password warnings endpoint_url)],
+    rw  => [qw(email password warnings endpoint_url current_list)],
 );
 
 use Carp qw(carp croak);
@@ -155,11 +155,11 @@ sub get_tasks {
 sub post_task {
     my $self = shift;
     my %args = @_;
-    my $list_id  = $args{list_id} || "inbox";
+    my $list_id   = $args{list_id};
     my $list_name = $args{list_name};
-    my $title    = $args{title};
-    my $starred  = $args{starred}; # optional (0 or 1)
-    my $due_date = $args{due_date}; # optional (The date is in ISO format. Example: 2012-12-30T06:00:28Z)
+    my $title     = $args{title};
+    my $starred   = $args{starred}; # optional (0 or 1)
+    my $due_date  = $args{due_date}; # optional (The date is in ISO format. Example: 2012-12-30T06:00:28Z)
 
     if ( $list_id && $list_name ) {
         $self->error("can not specify togeter list_id and list_name.");
@@ -167,10 +167,12 @@ sub post_task {
 
     # search $list_id
     if ( $list_name ) {
-        my @lists = $self->get_lists();
-        for my $list (@lists) {
-            my $this_list_name = $list->{title};
-            if ( $list_name eq $this_list_name ) {
+        # current_lists mechanism is save to call huge "get list" API.
+        my $lists = $self->current_lists() || $self->get_lists();
+        for my $list (@$lists) {
+            my $current_list_name = $list->title;
+            # $list_name and $current_list_name are internal string.
+            if ( $list_name eq $current_list_name ) {
                 $list_id = $list->{id};
                 last;
             }
@@ -180,8 +182,30 @@ sub post_task {
         }
     }
 
+    # If lists cached, then search list_id in it.
+    if ( my $lists = $self->current_lists() ) {
+        my $guess_list_name;
+        for my $list (@$lists) {
+            if ( $list_name eq $list->title ) {
+                $guess_list_name;
+                last;
+            }
+        }
+        if ( !$guess_list_name ) {
+            # TODO: create new list by its name?
+            # my $new_lsit = $self->post_list( $list_name );
+            # $list_id = $new_list->id;
+        }
+    }
+
     if ( !$list_id ) {
-        $self->error("can not find list_id.");
+        $list_id = "inbox";
+        if ( $list_name ) {
+            local *STDOUT;
+            binmode STDOUT, ':utf-8';
+            # this happning is small incident. Only carp.
+            carp qq(You specify list_name="$list_name". Hoever this list_name is not found. Your task is set to "inbox");
+        }
     }
 
     my $res = $self->ua->post(
@@ -216,6 +240,7 @@ sub post_task {
 # return WWW::Wunderlist::List objects.
 sub get_lists {
     my $self = shift;
+    my %args = @_;
     my $res = $self->ua->get( ENDPOINT_URL . '/me/lists' );
     $self->previous_http_response($res);
     if ( $res->is_success ) {
@@ -226,6 +251,7 @@ sub get_lists {
             my $list = WWW::Wunderlist::List->new($list_data, $self);
             push @lists, $list;
         }
+        $self->current_lists(\@lists);
         return wantarray ? @lists : \@lists;
     }
     else {
@@ -235,6 +261,17 @@ sub get_lists {
         $self->error("get_lists is failed.");
         return;
     }
+}
+
+# $wl->get_list_by_name(LIST_NAME)
+sub get_list_by_name {
+    my $self = shift;
+    my $list_name = shift;
+    my $lists = $self->current_lists || $self->get_list;
+    for my $list (@$lists ) {
+        return $list if $list_name eq $list->title;
+    }
+    return;
 }
 
 # my $list = $wl->post_list( title => TITLE_UTF8_STRING );
@@ -253,6 +290,7 @@ sub post_list {
             $self->json->utf8->decode($res->content),
             $self,
         );
+        $self->get_lists(); # for cache to $self->current_lists()
         return $list;
     }
     else {
@@ -288,7 +326,7 @@ WWW::Wunderlist - Wunderlist API wrapper
         or die "get_tasks failed.";
     # title key's value is UTF-8 decoded string.
     $wl->post_task( title => 'Test of add task at' . localtime . ' #hashtag')
-        or die "set_tasks failed.";
+        or die "post_tasks failed.";
 
     my @lists = $wl->get_lists()
         or die "get_lists failed.";
@@ -413,9 +451,33 @@ It returns all lists.
 Return value is list of WWW::Wunderlist::List objects on list context,
 or ARRAY reference which has WWW::Wunderlist::List objects on scalar context.
 
+B<get_lists> method cache lists data in this object.
+You can get the cache B<current_lists> method
+
 See L<WWW::Wunderlist::List> for detail.
 
 For calling it, $wl $wl->login()ed already.
+
+=head2 my $list = $wl->get_list
+
+=head2 my $lists = $wl->current_lists();
+
+It returns all lists after calling $wl->get_lists().
+This returned data is $wl->get_lists()'es latest cache.
+
+Caution: this method returns ARRAY reference any situation.
+
+You can use this method:
+
+ # list context.
+ my @lists = $wl->current_lists() ? @{ $wl->current_lists() } : $wl->get_lists();
+
+or
+
+ # scalar context.
+ my $lists = $wl->current_lists() ? $wl->current_lists() : $wl->get_lists();
+
+This method's purpose is save huge calling "get list" API.
 
 =head2 my $list = $wl->post_list( ... )
 
