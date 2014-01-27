@@ -155,9 +155,34 @@ sub post_task {
     my $self = shift;
     my %args = @_;
     my $list_id  = $args{list_id} || "inbox";
+    my $list_name = $args{list_name};
     my $title    = $args{title};
     my $starred  = $args{starred}; # optional (0 or 1)
     my $due_date = $args{due_date}; # optional (The date is in ISO format. Example: 2012-12-30T06:00:28Z)
+
+    if ( $list_id && $list_name ) {
+        $self->error("can not specify togeter list_id and list_name.");
+    }
+
+    # search $list_id
+    if ( $list_name ) {
+        my @lists = $self->get_lists();
+        for my $list (@lists) {
+            my $this_list_name = $list->{title};
+            if ( $list_name eq $this_list_name ) {
+                $list_id = $list->{id};
+                last;
+            }
+        }
+        if ( !$list_id ) {
+            $self->error("failed guess list_name from list_id.");
+        }
+    }
+
+    if ( !$list_id ) {
+        $self->error("can not find list_id.");
+    }
+
     my $res = $self->ua->post(
         ENDPOINT_URL . '/me/tasks',
         { list_id => $list_id,
