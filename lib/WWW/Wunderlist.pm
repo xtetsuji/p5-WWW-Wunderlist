@@ -144,6 +144,7 @@ sub get_tasks {
 
 # my $task = $wl->post_task(
 #     list_id => LIST_ID,
+#     list_name => LIST_NAME, # list_id or list_name
 #     title => TITLE_UTF8_STRING,
 #     starred => BOOL, ### optional
 #     due_date => ISO_FORMAT_DATE, ### optional
@@ -387,6 +388,8 @@ For calling it, $wl->login()ed already.
 
  my $task = $wl->post_task(
      list_id  => LIST_ID,
+     # list_id or list_name
+     list_name => LIST_NAME,
      title    => TITLE_UTF8_STRING,
      starred  => BOOL, ### optional
      due_date => ISO_FORMAT_DATE, ### optional
@@ -396,6 +399,9 @@ It posts task data by WWW::Wunderlist API.
 
 If it's post is success, then it returns WWW::Wunderlist::Task object.
 But it's post is failed, then it returns undef.
+
+You can not specify togetter list_id and list_name.
+However you have to specify either list_id or list_name.
 
 See L<WWW::Wunderlist::Task> for detail.
 
