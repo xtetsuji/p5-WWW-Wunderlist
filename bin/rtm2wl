@@ -5,6 +5,31 @@ use warnings;
 
 use WWW::Wunderlist;
 
+use Getopt::Long;
+use Pod::Usage qw(pod2usage);
+
+# see: http://blog.64p.org/entry/2013/04/03/125431
+my $p = Getopt::Long::Parser->new(
+    config => [qw(posix_default no_ignore_case auto_help)]
+);
+$p->getoptions(
+    'version!'       => \$version,
+    'email=s'    => \my $email,
+    'password=s' => \my $password,
+);
+
+if ( !$email || $email !~ /@/ || !$password ) {
+    warn "email and password are required.";
+    pod2usage(1);
+}
+
+my $wl = WWW::Wunderlist->new(
+    email => $email,
+    password => $password,
+);
+
+...
+
 =pod
 
 =encoding utf-8
@@ -15,11 +40,16 @@ rtm2wl - Remember the Milk XML data to Wunderlist.
 
 =head1 SYNOPSIS
 
-rtm2wl --username=YOURNAME --password=YOURPASS rtm.xml
+ rtm2wl --email=YOUREMAIL \
+        --password=YOURPASS \
+        rtm-completed.atom \
+        rtm-uncomplete.atom
+
+2nd argument "uncomplete" ATOM file is optional.
 
 =head1 CAUTION
 
-
+THIS PROGRAM IS ALPHA QUALITY.
 
 =head1 COPYRIGHT AND LICENSE
 
