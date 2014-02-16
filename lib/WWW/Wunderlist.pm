@@ -6,7 +6,7 @@ use warnings;
 
 use Class::Accessor::Lite (
     new => 0,
-    rw  => [qw(email password warnings endpoint_url current_list)],
+    rw  => [qw(email password warnings endpoint_url current_lists)],
 );
 
 use Carp qw(carp croak);
@@ -173,7 +173,7 @@ sub post_task {
             my $current_list_name = $list->title;
             # $list_name and $current_list_name are internal string.
             if ( $list_name eq $current_list_name ) {
-                $list_id = $list->{id};
+                $list_id = $list->id;
                 last;
             }
         }
@@ -182,21 +182,23 @@ sub post_task {
         }
     }
 
-    # If lists cached, then search list_id in it.
-    if ( my $lists = $self->current_lists() ) {
-        my $guess_list_name;
-        for my $list (@$lists) {
-            if ( $list_name eq $list->title ) {
-                $guess_list_name;
-                last;
-            }
-        }
-        if ( !$guess_list_name ) {
-            # TODO: create new list by its name?
-            # my $new_lsit = $self->post_list( $list_name );
-            # $list_id = $new_list->id;
-        }
-    }
+#    # If lists cached, then search list_id in it.
+#    if ( my $lists = $self->current_lists() ) {
+#        my $guess_list_name;
+#        for my $list (@$lists) {
+#            if ( $list_name eq $list->title ) {
+#                $guess_list_name;
+#                last;
+#            }
+#        }
+#        if ( !$guess_list_name ) {
+#            # TODO: create new list by its name?
+#            # my $new_lsit = $self->post_list( $list_name );
+#            # $list_id = $new_list->id;
+#        }
+#    }
+#
+
 
     if ( !$list_id ) {
         $list_id = "inbox";
@@ -267,7 +269,7 @@ sub get_lists {
 sub get_list_by_name {
     my $self = shift;
     my $list_name = shift;
-    my $lists = $self->current_lists || $self->get_list;
+    my $lists = $self->current_lists() || $self->get_list();
     for my $list (@$lists ) {
         return $list if $list_name eq $list->title;
     }
